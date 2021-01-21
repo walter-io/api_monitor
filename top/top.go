@@ -1,4 +1,4 @@
-package main
+package top
 
 import (
 	"fmt"
@@ -14,8 +14,16 @@ type House struct {
 	Motto int    `table:"请求次数"`
 }
 
-func main() {
-	n := 0
+func Top() {
+
+	//for {
+	//	fmt.Println("Over")
+	//	time.Sleep(time.Second * 1)
+	//	cmd := exec.Command("cmd", "/c", "cls")
+	//	cmd.Stdout = os.Stdout
+	//	cmd.Run()
+	//}
+
 	//cmd := exec.Command("cmd", "/c", "cls")
 	//cmd.Stdout = os.Stdout
 	//cmd.Run()
@@ -26,7 +34,7 @@ func main() {
 	//}
 	//fmt.Println("Over")
 
-
+	n := 0
 	for {
 		s := []House{
 			{"1", "api/login/login", "192.168.0.138", 3},
@@ -37,6 +45,16 @@ func main() {
 		fmt.Fprintf(os.Stdout, "%s\r", t)
 		n++
 		time.Sleep(time.Second*1)
+
+		//app := "clear"
+		//cmd := exec.Command(app)
+		//stdout, err := cmd.Output()
+		//
+		//if err != nil {
+		//	println(err.Error())
+		//	return
+		//}
+		//print(string(stdout))
 	}
 
 
