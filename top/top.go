@@ -1,10 +1,11 @@
 package top
 
 import (
+	"bytes"
 	"fmt"
-	"github.com/modood/table"
-	"os"
-	"time"
+	"log"
+	"os/exec"
+	"strings"
 )
 
 type House struct {
@@ -15,6 +16,16 @@ type House struct {
 }
 
 func Top() {
+
+	cmd := exec.Command("tr", "a-z", "A-Z")
+	cmd.Stdin = strings.NewReader("some input")
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("in all caps: %q\n", out.String())
 
 	//for {
 	//	fmt.Println("Over")
@@ -34,28 +45,28 @@ func Top() {
 	//}
 	//fmt.Println("Over")
 
-	n := 0
-	for {
-		s := []House{
-			{"1", "api/login/login", "192.168.0.138", 3},
-			{"2", "api/user/getUserInfo", "192.168.0.138", 2},
-			{"3", "api/user/detail", "192.168.0.138", n},
-		}
-		t := table.Table(s)
-		fmt.Fprintf(os.Stdout, "%s\r", t)
-		n++
-		time.Sleep(time.Second*1)
-
-		//app := "clear"
-		//cmd := exec.Command(app)
-		//stdout, err := cmd.Output()
-		//
-		//if err != nil {
-		//	println(err.Error())
-		//	return
-		//}
-		//print(string(stdout))
-	}
+	//n := 0
+	//for {
+	//	s := []House{
+	//		{"1", "api/login/login", "192.168.0.138", 3},
+	//		{"2", "api/user/getUserInfo", "192.168.0.138", 2},
+	//		{"3", "api/user/detail", "192.168.0.138", n},
+	//	}
+	//	t := table.Table(s)
+	//	fmt.Fprintf(os.Stdout, "%s\r", t)
+	//	n++
+	//	time.Sleep(time.Second*1)
+	//
+	//	//app := "clear"
+	//	//cmd := exec.Command(app)
+	//	//stdout, err := cmd.Output()
+	//	//
+	//	//if err != nil {
+	//	//	println(err.Error())
+	//	//	return
+	//	//}
+	//	//print(string(stdout))
+	//}
 
 
 }
