@@ -21,6 +21,9 @@ func (c *SelfTail) Run() {
 
 
 	// 开协程抓包放队列 TODO HERE
+	c.Center.TailQueue()
+
+
 
 	// 从抓包队列获取数据进行解析
 	go func() {

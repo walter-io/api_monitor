@@ -5,6 +5,12 @@ package center
  */
 type Center struct {
 	ParseResult chan Detail
+	TailRow chan string
+}
+
+type TailResultInterface interface {
+	TailQueue()
+	TailQueueSubmit(detail Detail)
 }
 
 /**
@@ -44,4 +50,18 @@ func (c *Center) Queue()  {
 func (c *Center) Submit(detail Detail)  {
 	//fmt.Printf("%+v:", detail)
 	c.ParseResult <- detail
+}
+
+/**
+ * 抓包队列
+ */
+func (c *Center) TailQueue()  {
+	c.TailRow = make(chan string, 10)
+}
+
+/**
+ * 提交行到抓包队列
+ */
+func (c *Center) TailSubmitQueue(row string)  {
+	c.TailRow <- row
 }
