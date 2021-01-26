@@ -1,112 +1,57 @@
-package tail
+package self_tail
 
 import (
+	"apiMonitor/center"
 	"fmt"
 	"regexp"
 	"strconv"
 )
 
 /**
- * 详情
- */
-type Detail struct {
-	RemoteAddr string
-	RemoteUser string
-	Time       string
-	Method     string
-	RequestUrl string
-	Protocol   string
-	Status     int
-	Size       float64
-	OriginUrl  string
-	UserAgent  string
-}
-
-/**
- * 定义接口
- */
-type CenterInterface interface {
-	Queue()
-	Submit(detail Detail)
-	Run()
-}
-
-/**
  * 中心结构体
  */
-type Center struct {
-	CenterInterface CenterInterface
-	ParseResult chan Detail
+type SelfTail struct {
+	Center center.Center
 }
 
 /**
- * 新建队列
+ * 开始处理: 抓包只需要一个协程, 解析器需要多个协程, 存数据也要多个协程
  */
-func (c *Center) Queue()  {
-	c.ParseResult = make(chan Detail, 10)
-}
+func (c *SelfTail) Run() {
 
-/**
- * 提交到队列
- */
-func (c *Center) Submit(detail Detail) {
-	//fmt.Printf("%+v\n", detail)
-	c.ParseResult <- detail
-}
 
-/**
- * 开始处理
- */
-func (c *Center) Run()  {
-	//url := "192.168.0.68 - - [19/Jan/2021:19:09:05 +0800] \"GET /admin/gameManage.ReleaseVersion/add.html HTTP/1.1\" 200 12557 \"http://www.phpshjgame.com/admin/gameManage.ReleaseVersion/index.html\" \"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36\""
-	//temp := fetch(url)
-	//fmt.Printf("%+v\n", temp)
+	// 开协程抓包放队列 TODO HERE
 
-	// 做个并发保存数据：放对列 -> 队列存数据库和放redis
-
-	// 创建channel
-	c.Queue()
-
-	fmt.Println(3333333)
-
-	// 抓包只需要一个协程
-
-	// 解析器需要多个协程
-
-	// 存数据也要多个协程
-
-	//　开协程抓包
+	// 从抓包队列获取数据进行解析
 	go func() {
-		fmt.Println(111111)
+		c.Center.Queue()
 		for {
 			// 拿access_log行
 			row := "192.168.0.68 - - [19/Jan/2021:19:09:05 +0800] \"GET /admin/gameManage.ReleaseVersion/add.html HTTP/1.1\" 200 12557 \"http://www.phpshjgame.com/admin/gameManage.ReleaseVersion/index.html\" \"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36\""
+
 			// 交给解析器解析
-			temp := fetch(row)
+			temp := c.fetch(row)
 			// 把数据提交给通道
-			c.Submit(temp)
+			c.Center.Submit(temp)
 		}
 	}()
 
-	fmt.Println(44444444)
 	// 开协程从通道拿数据存数据库和redis
-	go func() {
-		fmt.Println(2222222)
-		for {
-			select {
-			case t := <-c.ParseResult:
-				fmt.Printf("%+v\n", t)
-			default:
-				fmt.Println("没有数据\n")
-			}
+	for {
+		select {
+		case t := <-c.Center.ParseResult:
+			// TODO 在这里存数据
+			fmt.Printf("%+v\n", t)
+		default:
+			fmt.Println("没有数据\n")
 		}
-	}()
+	}
 }
 
 /**
  * 解析内容
  */
-func fetch(row string) Detail {
+func (c *SelfTail) fetch(row string) center.Detail {
 	// 匹配nginx日志的正则
 	strRegexp := `(\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3})\s-\s(.*)\[(.*)\]\s\"(.*)\s(.*)\s(.*)\"\s(\d+)\s(\d+)\s\"(.*)\"\s\"(.*)\"`
 	resp 	  := regexp.MustCompile(strRegexp)
@@ -132,7 +77,7 @@ func fetch(row string) Detail {
 		$upstream_response_time 请求过程中，upstream响应时间 0.002
 		192.168.0.68 - [19/Jan/2021:14:16:06 +0800] GET /admin/gameManage.gameRegisterEmail/add.html HTTP/1.1 200 31595 http://www.phpshjgame.com/admin/gameManage.GameRegisterEmail/index.html Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36 - 3.580
 	*/
-	detail := Detail{}
+	detail := center.Detail{}
 	for _, match := range body {
 		detail.RemoteAddr = match[1]
 		detail.RemoteUser = match[2]
@@ -150,7 +95,3 @@ func fetch(row string) Detail {
 	return detail
 }
 
-func Tail() {
-	c := Center{}
-	c.Run()
-}
