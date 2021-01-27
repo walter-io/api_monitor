@@ -3,6 +3,7 @@ package self_tail
 import (
 	"apiMonitor/center"
 	"fmt"
+	"github.com/hpcloud/tail"
 	"regexp"
 	"strconv"
 )
@@ -19,23 +20,30 @@ type SelfTail struct {
  */
 func (c *SelfTail) Run() {
 
-
-	// 开协程抓包放队列 TODO HERE
-	c.Center.TailQueue()
-
-
+	// 开协程抓包放队列
+	go func() {
+		c.Center.TailQueue()
+		// 开始抓包
+		t, err := tail.TailFile("www.lara.com.access_log.log", tail.Config{Follow: true})
+		if err != nil {
+			panic(err)
+		}
+		for line := range t.Lines {
+			c.Center.TailSubmitQueue(line.Text)
+		}
+	}()
 
 	// 从抓包队列获取数据进行解析
 	go func() {
-		c.Center.Queue()
+		c.Center.ParseQueue()
 		for {
 			// 拿access_log行
-			row := "192.168.0.68 - - [19/Jan/2021:19:09:05 +0800] \"GET /admin/gameManage.ReleaseVersion/add.html HTTP/1.1\" 200 12557 \"http://www.phpshjgame.com/admin/gameManage.ReleaseVersion/index.html\" \"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36\""
-
+			row := <- c.Center.TailRows
+			//row := "192.168.0.68 - - [19/Jan/2021:19:09:05 +0800] \"GET /admin/gameManage.ReleaseVersion/add.html HTTP/1.1\" 200 12557 \"http://www.phpshjgame.com/admin/gameManage.ReleaseVersion/index.html\" \"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36\""
 			// 交给解析器解析
-			temp := c.fetch(row)
+			temp := c.parse(row)
 			// 把数据提交给通道
-			c.Center.Submit(temp)
+			c.Center.ParseQueueSubmit(temp)
 		}
 	}()
 
@@ -46,7 +54,7 @@ func (c *SelfTail) Run() {
 			// TODO 在这里存数据
 			fmt.Printf("%+v\n", t)
 		default:
-			fmt.Println("没有数据\n")
+			//fmt.Println("没有数据\n")
 		}
 	}
 }
@@ -54,7 +62,7 @@ func (c *SelfTail) Run() {
 /**
  * 解析内容
  */
-func (c *SelfTail) fetch(row string) center.Detail {
+func (c *SelfTail) parse(row string) center.Detail {
 	// 匹配nginx日志的正则
 	strRegexp := `(\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3})\s-\s(.*)\[(.*)\]\s\"(.*)\s(.*)\s(.*)\"\s(\d+)\s(\d+)\s\"(.*)\"\s\"(.*)\"`
 	resp 	  := regexp.MustCompile(strRegexp)
