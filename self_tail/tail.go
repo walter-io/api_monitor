@@ -2,10 +2,12 @@ package self_tail
 
 import (
 	"apiMonitor/center"
+	"apiMonitor/drivers"
 	"fmt"
 	"github.com/hpcloud/tail"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 /**
@@ -20,11 +22,17 @@ type SelfTail struct {
  */
 func (c *SelfTail) Run() {
 
+	//row := "192.168.0.68 - - [19/Jan/2021:19:09:05 +0800] \"GET /admin/gameManage.ReleaseVersion/add.html HTTP/1.1\" 200 12557 \"http://www.phpshjgame.com/admin/gameManage.ReleaseVersion/index.html\" \"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36\""
+	//row := "192.168.0.68 - - [29/Jan/2021:16:01:48 +0800] \"GET /admin/adminManage.Purview/edit/purviewId/225 HTTP/1.1\" 200 14971 \"http://www.phpshjgame.com/admin/adminManage.Purview/list.html?name=shuisheng\" \"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36\""
+	//// 交给解析器解析
+	//c.parse(row)
+	//panic("结束")
+
 	// 开协程抓包放队列
 	go func() {
 		c.Center.TailQueue()
 		// 开始抓包
-		t, err := tail.TailFile("www.lara.com.access_log.log", tail.Config{Follow: true})
+		t, err := tail.TailFile("/home/wwwlogs/www.phpshjgame.com.access_log.log", tail.Config{Follow: true})
 		if err != nil {
 			panic(err)
 		}
@@ -39,7 +47,6 @@ func (c *SelfTail) Run() {
 		for {
 			// 拿access_log行
 			row := <- c.Center.TailRows
-			//row := "192.168.0.68 - - [19/Jan/2021:19:09:05 +0800] \"GET /admin/gameManage.ReleaseVersion/add.html HTTP/1.1\" 200 12557 \"http://www.phpshjgame.com/admin/gameManage.ReleaseVersion/index.html\" \"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36\""
 			// 交给解析器解析
 			temp := c.parse(row)
 			// 把数据提交给通道
@@ -48,11 +55,13 @@ func (c *SelfTail) Run() {
 	}()
 
 	// 开协程从通道拿数据存数据库和redis
+	clientRedis := *drivers.ClientRedis
 	for {
 		select {
 		case t := <-c.Center.ParseResult:
-			// TODO 在这里存数据
-			fmt.Printf("%+v\n", t)
+			// 在这里存数据
+			clientRedis.Do("ZADD", "api_monitor", "INCR", 1, t.OriginUrl)
+			//fmt.Printf("%+v\n", t)
 		default:
 			//fmt.Println("没有数据\n")
 		}
@@ -68,8 +77,7 @@ func (c *SelfTail) parse(row string) center.Detail {
 	resp 	  := regexp.MustCompile(strRegexp)
 	body 	  := resp.FindAllStringSubmatch(row, -1)
 
-	// 接收解析后的数据
-	/*
+	/*  接收解析后的数据
 		$remote_addr 客户端地址 211.28.65.253
 		$remote_user 客户端用户名称 --
 		$time_local 访问时间和时区 18/Jul/2012:17:00:01 +0800
@@ -102,6 +110,14 @@ func (c *SelfTail) parse(row string) center.Detail {
 		size, _ := strconv.ParseFloat(match[8], 64)
 		latestSize := strconv.FormatFloat((size / 1024 / 1024), 'f', 2, 64)
 		detail.Size, _ = strconv.ParseFloat(latestSize, 64)
+
+		// 链接去掉参数
+		symbolIndex := strings.Index(detail.OriginUrl, "?")
+		if symbolIndex > 0 {
+			detail.OriginUrl = detail.OriginUrl[0:symbolIndex]
+		}
+		fmt.Printf("%s\n", detail.OriginUrl)
+
 	}
 	return detail
 }
