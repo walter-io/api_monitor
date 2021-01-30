@@ -1,14 +1,14 @@
 package main
 
 import (
-	"apiMonitor/self_tail"
+	"apiMonitor/top"
 )
 
 func main()  {
-	tailPackage := self_tail.SelfTail{}
-	tailPackage.Run()
+	//tailPackage := self_tail.SelfTail{}
+	//tailPackage.Run()
 
 	//fmt.Scan()
 
-	//top.Top()
+	top.Top()
 }

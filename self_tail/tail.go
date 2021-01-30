@@ -118,7 +118,7 @@ func (c *SelfTail) parse(row string) center.Detail {
 		}
 		fmt.Printf("%s\n", detail.OriginUrl)
 	}
-	
+
 	return detail
 }
 
