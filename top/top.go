@@ -42,10 +42,12 @@ func Top() {
 	//}
 	//fmt.Println("Over")
 
-	// 打印表格 TODO HERE
+	// 打印表格
 	clientRedis := *drivers.ClientRedis
-	reply, _ := clientRedis.Do("ZCOUNT ", "api_monitor", 1, 3)
-	fmt.Printf("%+v", reply)
+	// 获取成员：前10条
+	reply, _ := clientRedis.Do("ZREVRANGE", "api_monitor", 1, 10)
+	// 通过成员获取分数:ZSCORE TODO HERE
+	fmt.Printf("%+s\n", reply)
 	//n := 0
 	//for {
 	//	// 从redis拿数据
