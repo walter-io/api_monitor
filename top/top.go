@@ -3,6 +3,7 @@ package top
 import (
 	"apiMonitor/drivers"
 	"fmt"
+	"reflect"
 )
 
 type House struct {
@@ -45,9 +46,22 @@ func Top() {
 	// 打印表格
 	clientRedis := *drivers.ClientRedis
 	// 获取成员：前10条
-	reply, _ := clientRedis.Do("ZREVRANGE", "api_monitor", 1, 10)
-	// 通过成员获取分数:ZSCORE TODO HERE
-	fmt.Printf("%+s\n", reply)
+	data := make([]interface{}, 10)
+	reply, _ := clientRedis.Do("ZREVRANGE", "api_monitor", 0, 10, "WITHSCORES")
+	s := reflect.ValueOf(reply)
+
+	// TODO HERE
+	for i := 0; i < 5; i++ {
+		temp := make([]interface{}, 2)
+		temp[0] = s.Index(i)
+		temp[1] = s.Index(i + 1)
+		data = append(data, temp)
+	}
+
+	for i := 0; i < s.Len(); i++ {
+		fmt.Printf("%s\n", s.Index(i))
+	}
+
 	//n := 0
 	//for {
 	//	// 从redis拿数据
