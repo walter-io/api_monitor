@@ -3,7 +3,7 @@ package top
 import (
 	"apiMonitor/drivers"
 	"fmt"
-	"reflect"
+	"github.com/gomodule/redigo/redis"
 )
 
 type House struct {
@@ -43,24 +43,33 @@ func Top() {
 	//}
 	//fmt.Println("Over")
 
-	// 打印表格
+	// 获取redis数据
 	clientRedis := *drivers.ClientRedis
 	// 获取成员：前10条
-	data := make([]interface{}, 10)
-	reply, _ := clientRedis.Do("ZREVRANGE", "api_monitor", 0, 10, "WITHSCORES")
-	s := reflect.ValueOf(reply)
-
-	// TODO HERE
-	for i := 0; i < 5; i++ {
-		temp := make([]interface{}, 2)
-		temp[0] = s.Index(i)
-		temp[1] = s.Index(i + 1)
-		data = append(data, temp)
+	reply, err := redis.StringMap(clientRedis.Do("ZREVRANGE", "api_monitor", 0, 10, "WITHSCORES"))
+	if err != nil {
+		panic(err)
+	}
+	for k, v := range reply {
+		fmt.Printf("%+v, %v\n", k, v)
 	}
 
-	for i := 0; i < s.Len(); i++ {
-		fmt.Printf("%s\n", s.Index(i))
-	}
+	// TODO HERE 显示在表格中，并定时刷新
+
+
+
+	////
+	//for i := 0; i < 5; i++ {
+	//	temp := make([]interface{}, 2)
+	//	temp[0] = s.Index(i)
+	//	temp[1] = s.Index(i + 1)
+	//	fmt.Printf("%+v\n", temp)
+	//	data = append(data, temp)
+	//}
+
+	//for i := 0; i < s.Len(); i++ {
+	//	fmt.Printf("%s\n", s.Index(i))
+	//}
 
 	//n := 0
 	//for {
