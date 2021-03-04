@@ -4,6 +4,7 @@ import (
 	"apiMonitor/drivers"
 	"fmt"
 	"github.com/gomodule/redigo/redis"
+	"github.com/liushuochen/gotable"
 )
 
 type House struct {
@@ -15,24 +16,6 @@ type House struct {
 
 func Top() {
 
-	//cmd := exec.Command("tr", "a-z", "A-Z")
-	//cmd.Stdin = strings.NewReader("some input")
-	//var out bytes.Buffer
-	//cmd.Stdout = &out
-	//err := cmd.Run()
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//fmt.Printf("in all caps: %q\n", out.String())
-
-	//for {
-	//	fmt.Println("Over")
-	//	time.Sleep(time.Second * 1)
-	//	cmd := exec.Command("cmd", "/c", "cls")
-	//	cmd.Stdout = os.Stdout
-	//	cmd.Run()
-	//}
-
 	// 无刷新加次数
 	//cmd := exec.Command("cmd", "/c", "cls")
 	//cmd.Stdout = os.Stdout
@@ -43,18 +26,31 @@ func Top() {
 	//}
 	//fmt.Println("Over")
 
-	// 获取redis数据
+
+
+	// TODO HERE 显示在表格中，并定时刷新
+	headers := []string{"interface", "count"}
+	tb, err := gotable.CreateTable(headers)
+	if err != nil {
+		fmt.Println("Create table failed: ", err.Error())
+		return
+	}
+
+	// 获取redis数据 TODO
 	clientRedis := *drivers.ClientRedis
-	// 获取成员：前10条
+	// 获取成员：前10条 TODO 每次拿出来的数据顺序不一样
 	reply, err := redis.StringMap(clientRedis.Do("ZREVRANGE", "api_monitor", 0, 10, "WITHSCORES"))
 	if err != nil {
 		panic(err)
 	}
 	for k, v := range reply {
-		fmt.Printf("%+v, %v\n", k, v)
+		value := gotable.CreateEmptyValueMap()
+		value["interface"] = gotable.CreateValue(k)
+		value["count"] = gotable.CreateValue(v)
+		tb.AddValue(value)
 	}
 
-	// TODO HERE 显示在表格中，并定时刷新
+	tb.PrintTable()
 
 
 
