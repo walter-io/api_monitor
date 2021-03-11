@@ -2,6 +2,7 @@ package self_tail
 
 import (
     "apiMonitor/center"
+    "apiMonitor/config"
     "apiMonitor/drivers"
     "fmt"
     "github.com/hpcloud/tail"
@@ -59,8 +60,15 @@ func (c *SelfTail) Run() {
     for {
         select {
         case t := <-c.Center.ParseResult:
-            // 在这里存数据
-            clientRedis.Do("ZADD", "api_monitor", "INCR", 1, t.OriginUrl)
+            // 存redis
+            if config.SaveResit {
+                clientRedis.Do("ZADD", "api_monitor", "INCR", 1, t.OriginUrl)
+            }
+            // 存mysql TODO HERE 修改nginx配置，detail结构把响应时间加上，再存到数据库
+            if config.SaveMysql {
+
+            }
+
             //fmt.Printf("%+v\n", t)
         default:
             //fmt.Println("没有数据\n")
