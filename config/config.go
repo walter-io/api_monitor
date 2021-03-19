@@ -16,7 +16,7 @@ const (
     MysqlUsername = "root"
     MysqlPassword = "123456"
 
-
+    TailFile = "www.phpshjgame.com.access_log.log"
 )
 
 

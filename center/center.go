@@ -13,16 +13,17 @@ type (
      * 数据详情
      */
     Detail struct {
-        RemoteAddr string
-        RemoteUser string
-        Time       string
-        Method     string
-        RequestUrl string
-        Protocol   string
-        Status     int
-        Size       float64
-        OriginUrl  string
-        UserAgent  string
+        RemoteAddr  string
+        RemoteUser  string
+        Time        string
+        Method      string
+        RequestUrl  string
+        Protocol    string
+        Status      int
+        Size        float64
+        OriginUrl   string
+        UserAgent   string
+        RequestTime float64
     }
 
     /**

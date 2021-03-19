@@ -3,7 +3,6 @@ package self_tail
 import (
     "apiMonitor/center"
     "apiMonitor/config"
-    "apiMonitor/drivers"
     "fmt"
     "github.com/hpcloud/tail"
     "regexp"
@@ -33,7 +32,7 @@ func (c *SelfTail) Run() {
     go func() {
         c.Center.TailQueue()
         // 开始抓包
-        t, err := tail.TailFile("/home/wwwlogs/www.phpshjgame.com.access_log.log", tail.Config{Follow: true})
+        t, err := tail.TailFile(config.TailFile, tail.Config{Follow: true}) // TODO 加配置
         if err != nil {
             panic(err)
         }
@@ -49,27 +48,27 @@ func (c *SelfTail) Run() {
             // 拿access_log行
             row := <- c.Center.TailRows
             // 交给解析器解析
-            temp := c.parse(row)
+            temp := c.Parse(row)
             // 把数据提交给通道
             c.Center.ParseQueueSubmit(temp)
         }
     }()
 
     // 开协程从通道拿数据存数据库和redis
-    clientRedis := *drivers.ClientRedis
+    //clientRedis := *drivers.ClientRedis
     for {
         select {
         case t := <-c.Center.ParseResult:
             // 存redis
-            if config.SaveResit {
-                clientRedis.Do("ZADD", "api_monitor", "INCR", 1, t.OriginUrl)
-            }
+            //if config.SaveResit {
+            //    clientRedis.Do("ZADD", "api_monitor", "INCR", 1, t.OriginUrl)
+            //}
             // 存mysql TODO HERE 修改nginx配置，detail结构把响应时间加上，再存到数据库
-            if config.SaveMysql {
+            //if config.SaveMysql {
+            //
+            //}
 
-            }
-
-            //fmt.Printf("%+v\n", t)
+            fmt.Printf("%+v\n", t)
         default:
             //fmt.Println("没有数据\n")
         }
@@ -79,14 +78,14 @@ func (c *SelfTail) Run() {
 /**
  * 解析内容
  */
-func (c *SelfTail) parse(row string) center.Detail {
+func (c *SelfTail) Parse(row string) center.Detail {
     // 匹配nginx日志的正则
-    strRegexp := `(\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3})\s-\s(.*)\[(.*)\]\s\"(.*)\s(.*)\s(.*)\"\s(\d+)\s(\d+)\s\"(.*)\"\s\"(.*)\"`
+    strRegexp := `(\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3})\s-\s(.*)\[(.*)\]\s\"(.*)\s(.*)\s(.*)\"\s(\d+)\s(\d+)\s\"(.*)\"\s\"(.*)\"\s(.*)`
     resp       := regexp.MustCompile(strRegexp)
     body       := resp.FindAllStringSubmatch(row, -1)
 
     /**
-     * 接收解析后的数据
+     * 接收解析后的数据RechargeController
      * $remote_addr 客户端地址 211.28.65.253
      * $remote_user 客户端用户名称 --
      * $time_local 访问时间和时区 18/Jul/2012:17:00:01 +0800
@@ -107,25 +106,29 @@ func (c *SelfTail) parse(row string) center.Detail {
      */
     detail := center.Detail{}
     for _, match := range body {
-        detail.RemoteAddr = match[1]
-        detail.RemoteUser = match[2]
-        detail.Time       = match[3]
+        detail.RemoteAddr   = match[1]
+        detail.RemoteUser   = match[2]
+        detail.Time         = match[3]
         detail.Method       = match[4]
-        detail.RequestUrl = match[5]
-        detail.Protocol   = match[6]
-        detail.Status, _  = strconv.Atoi(match[7])
-        detail.OriginUrl  = match[9]
-        detail.UserAgent  = match[10]
+        detail.RequestUrl   = match[5]
+        detail.Protocol     = match[6]
+        detail.Status, _    = strconv.Atoi(match[7])
+        detail.OriginUrl    = match[9]
+        detail.UserAgent    = match[10]
         size, _ := strconv.ParseFloat(match[8], 64)
         latestSize := strconv.FormatFloat((size / 1024 / 1024), 'f', 2, 64)
         detail.Size, _ = strconv.ParseFloat(latestSize, 64)
+
+        // TODO 拿到的数据为空
+        requestTime, _ :=  strconv.ParseFloat(match[11], 64)
+        detail.RequestTime  = requestTime
 
         // 链接去掉参数
         symbolIndex := strings.Index(detail.OriginUrl, "?")
         if symbolIndex > 0 {
             detail.OriginUrl = detail.OriginUrl[0:symbolIndex]
         }
-        fmt.Printf("%s\n", detail.OriginUrl)
+        //fmt.Printf("%s\n", detail.OriginUrl)
     }
 
     return detail
