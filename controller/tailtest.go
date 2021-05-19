@@ -1,4 +1,4 @@
-package self_tail
+package controller
 
 import (
     "apiMonitor/config"

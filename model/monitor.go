@@ -1,7 +1,7 @@
 package model
 
 import (
-	"fmt"
+	"apiMonitor/config"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -9,7 +9,7 @@ import (
 /**
  * 数据详情
  */
-type Detail struct { // todo 数据库字段要优化
+type Detail struct {
 	RemoteAddr  string  `gorm:"column:ip"`
 	RemoteUser  string  `gorm:"column:remote_user"`
 	Time        string  `gorm:"column:request_time"`
@@ -27,8 +27,8 @@ type Detail struct { // todo 数据库字段要优化
  * 连接数据库
  */
 func ConnectDb() gorm.DB {
-	// TODO 连接数据库，哪里设置表？
-	dsn := "root:123456@tcp(192.168.0.235:3306)/lara?charset=utf8mb4&parseTime=True&loc=Local"
+	dsn := config.MysqlUsername + ":" + config.MysqlPassword + "@tcp(" + config.MysqlHost + ":" + config.MysqlPort + ")/" +
+		config.MysqlDatabase + "?charset=utf8mb4&parseTime=True&loc=Local"
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic(err)
@@ -42,5 +42,7 @@ func ConnectDb() gorm.DB {
 func InsertDetail(row Detail) {
 	db := ConnectDb()
 	res := db.Create(row)
-	fmt.Printf("Error: %v, RowsAffected: %v\n", res.Error, res.RowsAffected)
+	if  res.Error != nil {
+		panic(res.Error)
+	}
 }

@@ -1,9 +1,9 @@
-package self_tail
+package controller
 
 import (
-    "apiMonitor/logic"
     "apiMonitor/config"
     "apiMonitor/drivers"
+    "apiMonitor/logic"
     "apiMonitor/model"
     "github.com/hpcloud/tail"
     "regexp"
@@ -68,7 +68,7 @@ func (s *SelfTail) Run() {
 }
 
 /**
- * 解析内容 TODO 拆分成独立的解析器
+ * 解析内容
  * 接收解析后的数据RechargeController
  * $remote_addr 客户端地址 211.28.65.253
  * $remote_user 客户端用户名称 --

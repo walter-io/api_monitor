@@ -10,12 +10,12 @@ const (
     RedisAuth     = ""
     RedisPassword = ""
     RedisProtocol = "tcp"
-
+WW
     // mysql 连接配置
     SaveMysql     = true
     MysqlHost     = "192.168.0.235"
     MysqlPort     = "3306"
-    MysqlDatabase = "monitor"
+    MysqlDatabase = "lara"
     MysqlUsername = "root"
     MysqlPassword = "123456"
 
