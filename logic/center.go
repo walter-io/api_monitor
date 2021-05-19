@@ -1,29 +1,14 @@
-package center
+package logic
+
+import "apiMonitor/model"
 
 type (
     /**
      * 控制中心
      */
     Center struct {
-        ParseResult chan Detail
+        ParseResult chan model.Detail
         TailRows     chan string
-    }
-
-    /**
-     * 数据详情
-     */
-    Detail struct {
-        RemoteAddr  string
-        RemoteUser  string
-        Time        string
-        Method      string
-        RequestUrl  string
-        Protocol    string
-        Status      int
-        Size        float64
-        OriginUrl   string
-        UserAgent   string
-        RequestTime float64
     }
 
     /**
@@ -39,7 +24,7 @@ type (
      */
     ParserInterface interface {
         ParseQueue()
-        ParseQueueSubmit(detail Detail)
+        ParseQueueSubmit(detail model.Detail)
     }
 )
 
@@ -47,13 +32,13 @@ type (
  * 建立队列
  */
 func (c *Center) ParseQueue() {
-    c.ParseResult = make(chan Detail, 10)
+    c.ParseResult = make(chan model.Detail, 10)
 }
 
 /**
  * 把数据提交给队列
  */
-func (c *Center) ParseQueueSubmit(detail Detail) {
+func (c *Center) ParseQueueSubmit(detail model.Detail) {
     //fmt.Printf("%+v:", detail)
     c.ParseResult <- detail
 }

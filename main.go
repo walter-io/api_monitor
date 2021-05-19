@@ -1,6 +1,6 @@
 package main
 
-import "apiMonitor/self_tail"
+import "apiMonitor/controller/self_tail"
 
 func main()  {
 	// todo 把redis和mysql配置放好，再把整个包做成api（配置做成传参），在用gin框架做数据展示，访问超量报警
