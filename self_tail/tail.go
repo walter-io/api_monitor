@@ -3,6 +3,8 @@ package self_tail
 import (
     "apiMonitor/center"
     "apiMonitor/config"
+    "apiMonitor/drivers"
+    "apiMonitor/model"
     "fmt"
     "github.com/hpcloud/tail"
     "regexp"
@@ -21,13 +23,6 @@ type SelfTail struct {
  * 开始处理: 抓包只需要一个协程, 解析器需要多个协程, 存数据也要多个协程
  */
 func (c *SelfTail) Run() {
-
-    //row := "192.168.0.68 - - [19/Jan/2021:19:09:05 +0800] \"GET /admin/gameManage.ReleaseVersion/add.html HTTP/1.1\" 200 12557 \"http://www.phpshjgame.com/admin/gameManage.ReleaseVersion/index.html\" \"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36\""
-    //row := "192.168.0.68 - - [29/Jan/2021:16:01:48 +0800] \"GET /admin/adminManage.Purview/edit/purviewId/225 HTTP/1.1\" 200 14971 \"http://www.phpshjgame.com/admin/adminManage.Purview/list.html?name=shuisheng\" \"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36\""
-    //// 交给解析器解析
-    //c.parse(row)
-    //panic("结束")
-
     // 开协程抓包放队列
     go func() {
         c.Center.TailQueue()
@@ -55,20 +50,18 @@ func (c *SelfTail) Run() {
     }()
 
     // 开协程从通道拿数据存数据库和redis
-    //clientRedis := *drivers.ClientRedis
+    clientRedis := *drivers.ClientRedis
     for {
         select {
         case t := <-c.Center.ParseResult:
             // 存redis
-            //if config.SaveResit {
-            //    clientRedis.Do("ZADD", "api_monitor", "INCR", 1, t.OriginUrl)
-            //}
-            // 存mysql TODO HERE 修改nginx配置，detail结构把响应时间加上，再存到数据库
-            //if config.SaveMysql {
-            //
-            //}
-
-            fmt.Printf("%+v\n", t)
+            if config.SaveResit {
+               clientRedis.Do("ZADD", "api_monitor", "INCR", 1, t.OriginUrl)
+            }
+            // 存mysql
+            if config.SaveMysql {
+                model.InsertDetail(model.Detail(t))
+            }
         default:
             //fmt.Println("没有数据\n")
         }
@@ -76,11 +69,13 @@ func (c *SelfTail) Run() {
 }
 
 /**
- * 解析内容
+ * 解析内容 TODO 拆分成独立的解析器
  */
 func (c *SelfTail) Parse(row string) center.Detail {
     // 匹配nginx日志的正则
-    strRegexp := `(\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3})\s-\s(.*)\[(.*)\]\s\"(.*)\s(.*)\s(.*)\"\s(\d+)\s(\d+)\s\"(.*)\"\s\"(.*)\"\s(.*)`
+    //strRegexp := `(\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3})\s-\s(.*)\[(.*)\]\s\"(.*)\s(.*)\s(.*)\"\s(\d+)\s(\d+)\s\"(.*)\"\s\"(.*)\"\s(.*)`
+    strRegexp := `(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s-\s(.*)\[(.*)\]\s\"(.*)\s(.*)\s(.*)\"\s(\d+)\s(\d+)\s\"(.*)\"\s\"(.*)\"\s"(.*)\"\s\"(.*)\"`
+    // 192.168.0.237 - - [18/May/2021:17:54:42 +0800] "POST /admin/gameManage.Email/getListServerEmail.html HTTP/1.1" 200 10288 "http://www.phpshjgame.com/admin/gameManage.Email/listServerEmail.html" "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36" "-" "2.181"
     resp       := regexp.MustCompile(strRegexp)
     body       := resp.FindAllStringSubmatch(row, -1)
 
@@ -106,29 +101,28 @@ func (c *SelfTail) Parse(row string) center.Detail {
      */
     detail := center.Detail{}
     for _, match := range body {
-        detail.RemoteAddr   = match[1]
-        detail.RemoteUser   = match[2]
-        detail.Time         = match[3]
-        detail.Method       = match[4]
-        detail.RequestUrl   = match[5]
-        detail.Protocol     = match[6]
-        detail.Status, _    = strconv.Atoi(match[7])
-        detail.OriginUrl    = match[9]
-        detail.UserAgent    = match[10]
+        fmt.Printf("%+v\n", match)
         size, _ := strconv.ParseFloat(match[8], 64)
         latestSize := strconv.FormatFloat((size / 1024 / 1024), 'f', 2, 64)
         detail.Size, _ = strconv.ParseFloat(latestSize, 64)
+        requestTime, _ :=  strconv.ParseFloat(match[12], 64)     // 发送给客户端文件内容大小
 
-        // TODO 拿到的数据为空
-        requestTime, _ :=  strconv.ParseFloat(match[11], 64)
-        detail.RequestTime  = requestTime
+        detail.RemoteAddr   = match[1]                  // 客户端ip
+        detail.RemoteUser   = match[2]                  // 客户端名称
+        detail.Time         = match[3]                  // 访问时间和失去
+        detail.Method       = match[4]                  // http 请求方法
+        detail.RequestUrl   = match[5]                  // 请求url
+        detail.Protocol     = match[6]                  // ssl协议版本
+        detail.Status, _    = strconv.Atoi(match[7])    // http请求状态
+        detail.OriginUrl    = match[9]                  // 跳转来源
+        detail.UserAgent    = match[10]                 // 用户终端浏览器信息
+        detail.RequestTime  = requestTime               // 请求总时间
 
         // 链接去掉参数
         symbolIndex := strings.Index(detail.OriginUrl, "?")
         if symbolIndex > 0 {
             detail.OriginUrl = detail.OriginUrl[0:symbolIndex]
         }
-        //fmt.Printf("%s\n", detail.OriginUrl)
     }
 
     return detail

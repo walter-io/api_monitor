@@ -16,6 +16,6 @@ func TestSelfTail()  {
     var c = SelfTail{}
     for line := range t.Lines {
         res := c.Parse(line.Text)
-        fmt.Printf("%+v", res)
+        fmt.Printf("%+v\n", res)
     }
 }
